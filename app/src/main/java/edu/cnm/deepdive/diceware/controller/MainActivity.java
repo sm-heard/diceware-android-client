@@ -34,13 +34,42 @@ public class MainActivity extends AppCompatActivity {
     setupSignIn();
   }
 
+  @Override
+  public boolean onCreateOptionsMenu(Menu menu) {
+    getMenuInflater().inflate(R.menu.menu_main, menu);
+    return true;
+  }
+
+  @Override
+  public boolean onOptionsItemSelected(MenuItem item) {
+    boolean handled = true;
+    switch (item.getItemId()) {
+      case R.id.refresh:
+        refreshSignIn(() -> viewModel.refreshPassphrases());
+        break;
+      case R.id.action_settings:
+        break;
+      case R.id.sign_out:
+        signOut();
+        break;
+      default:
+        handled = super.onOptionsItemSelected(item);
+    }
+    return handled;
+  }
+
   private void setupViewModel() {
     viewModel = ViewModelProviders.of(this).get(MainViewModel.class);
     viewModel.getPassphrases().observe(this, (passphrases) -> {
       PassphraseAdapter adapter = new PassphraseAdapter(this, passphrases,
           (view, position, passphrase) -> {
-            // TODO Add code to pop up editor.
             Log.d("Passphrase click", passphrase.getKey());
+            PassphraseFragment fragment = PassphraseFragment.newInstance(passphrase);
+            fragment.setListener((p) -> {
+              waiting.setVisibility(View.VISIBLE);
+              viewModel.updatePassphrase(p);
+            });
+            fragment.show(getSupportFragmentManager(), fragment.getClass().getSimpleName());
           },
           (menu, position, passphrase) -> {
             Log.d("Passphrase context", passphrase.getKey());
@@ -77,39 +106,16 @@ public class MainActivity extends AppCompatActivity {
     Toolbar toolbar = findViewById(R.id.toolbar);
     setSupportActionBar(toolbar);
     FloatingActionButton fab = findViewById(R.id.fab);
-    fab.setOnClickListener(new View.OnClickListener() {
-      @Override
-      public void onClick(View view) {
-        Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-            .setAction("Action", null).show();
-      }
+    fab.setOnClickListener(view -> {
+      PassphraseFragment fragment = PassphraseFragment.newInstance();
+      fragment.setListener((passphrase) -> {
+        waiting.setVisibility(View.VISIBLE);
+        viewModel.addPassphrase(passphrase);
+      });
+      fragment.show(getSupportFragmentManager(), fragment.getClass().getSimpleName());
     });
     waiting = findViewById(R.id.waiting);
     passphraseList = findViewById(R.id.keyword_list);
-  }
-
-  @Override
-  public boolean onCreateOptionsMenu(Menu menu) {
-    getMenuInflater().inflate(R.menu.menu_main, menu);
-    return true;
-  }
-
-  @Override
-  public boolean onOptionsItemSelected(MenuItem item) {
-    boolean handled = true;
-    switch (item.getItemId()) {
-      case R.id.refresh:
-        refreshSignIn(() -> viewModel.refreshPassphrases());
-        break;
-      case R.id.action_settings:
-        break;
-      case R.id.sign_out:
-        signOut();
-        break;
-      default:
-        handled = super.onOptionsItemSelected(item);
-    }
-    return handled;
   }
 
   private void signOut() {
